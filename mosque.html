@@ -323,19 +323,24 @@
 </div>
 
 <script>
-let webAppUrl = '';
+// ===== رابط الـ Web App الثابت =====
+// هذا هو المكان الوحيد اللي تحتاج تعدّله مستقبلاً لو غيّرت رابط النشر
+// (مثلاً لو سويت Deploy جديد كلياً بدل تعديل نفس النشر الحالي)
+const DEFAULT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzBjYdhDTlUQTNnwmPMFah0KR57fCPpNfIRcpSdtp9WBZ4h3IZNiLluCxevlGwZ5yzpPg/exec';
+
+let webAppUrl = DEFAULT_WEB_APP_URL;
 let cache = { income: [], expenses: [], totals: {income:0, expense:0, remaining:0}, targets: [] };
 let activeType = 'expense';
 let activeChip = 'الكل';
 
 const fmt = n => (Number(n)||0).toLocaleString('ar-SA', {maximumFractionDigits:2});
 
-// ---------- تخزين رابط الويب (localStorage المتصفح، يثبت دائماً بهذا الجهاز) ----------
+// ---------- تخزين رابط الويب (localStorage كخيار تجاوز يدوي فقط) ----------
 async function loadUrl(){
   try{
     const v = localStorage.getItem('mosque-expenses:webapp-url');
-    if(v) webAppUrl = v;
-  }catch(e){ /* لا يوجد رابط محفوظ بعد */ }
+    if(v) webAppUrl = v; // تجاوز يدوي إذا غيّره المستخدم من الإعدادات سابقاً
+  }catch(e){ /* نبقى على الرابط الثابت DEFAULT_WEB_APP_URL */ }
 }
 async function saveUrl(u){
   webAppUrl = u;
@@ -560,11 +565,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
 // ---------- بدء التشغيل ----------
 (async function init(){
   await loadUrl();
-  if(!webAppUrl){
-    setTimeout(()=> document.getElementById('settingsBtn').click(), 400);
-  } else {
-    fetchData();
-  }
+  fetchData();
 })();
 </script>
 </body>
