@@ -205,6 +205,20 @@
   .tx.income .amt{color:var(--green);}
   .tx.expense .amt{color:var(--red);}
 
+  .filter-summary{
+    display:none; align-items:center; justify-content:space-between;
+    background:var(--teal-900); color:#fff; border-radius:14px;
+    padding:13px 16px; margin-bottom:14px; box-shadow:var(--shadow);
+  }
+  .filter-summary .fs-label{font-size:12.5px; opacity:.85; margin-bottom:3px;}
+  .filter-summary .fs-count{font-size:11px; opacity:.65;}
+  .filter-summary .fs-amount{font-family:'Reem Kufi'; font-size:20px; color:var(--gold-light);}
+
+  body.view-only .gear-btn{display:none;}
+  body.view-only .tabs{display:none;}
+  body.view-only #panel-add{display:none !important;}
+  body.view-only #panel-track{display:block !important;}
+
   .empty{
     text-align:center; padding:40px 12px; color:var(--ink-soft); font-size:14px;
   }
@@ -301,6 +315,7 @@
   <div class="panel" id="panel-track">
     <input type="text" class="searchbox" id="search" placeholder="ابحث عن بيان أو جهة..." />
     <div class="chips" id="chips"></div>
+    <div class="filter-summary" id="filterSummary"></div>
     <div id="txList"></div>
   </div>
 </div>
@@ -327,6 +342,10 @@
 // هذا هو المكان الوحيد اللي تحتاج تعدّله مستقبلاً لو غيّرت رابط النشر
 // (مثلاً لو سويت Deploy جديد كلياً بدل تعديل نفس النشر الحالي)
 const DEFAULT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6kIc-OMXJ4lB-LJn_URJUKMhOnAZly-8vZmb-WBZ3FrYGKMZUbvWdKtY74cfmOimAFQ/exec';
+
+const urlParams = new URLSearchParams(location.search);
+const VIEW_ONLY = urlParams.get('view') === '1';
+if(VIEW_ONLY){ document.body.classList.add('view-only'); }
 
 let webAppUrl = DEFAULT_WEB_APP_URL;
 let cache = { income: [], expenses: [], totals: {income:0, expense:0, remaining:0}, targets: [] };
@@ -453,16 +472,37 @@ function parseDMY(d){
   return new Date(d);
 }
 
+function renderFilterSummary(chipItems){
+  const box = document.getElementById('filterSummary');
+  if(activeChip === 'الكل'){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  const total = chipItems.reduce((s,i)=> s + i.amount, 0);
+  box.style.display = 'flex';
+  box.innerHTML = `
+    <div>
+      <div class="fs-label">إجمالي «${escapeHtml(activeChip)}»</div>
+      <div class="fs-count">${chipItems.length} قيد</div>
+    </div>
+    <div class="fs-amount">${fmt(total)}</div>
+  `;
+}
+
 function renderList(){
   const q = (document.getElementById('search').value||'').trim();
-  let items = [
+  let base = [
     ...cache.expenses.map(e=>({...e, type:'expense'})),
     ...cache.income.map(i=>({...i, type:'income', target:''}))
   ];
+  let chipItems = base;
   if(activeChip !== 'الكل'){
-    items = items.filter(i => i.type==='income' ? false : i.target===activeChip);
-    if(activeChip==='الكل') items = items;
+    chipItems = base.filter(i => i.type==='income' ? false : i.target===activeChip);
   }
+  renderFilterSummary(chipItems);
+
+  let items = chipItems;
   if(q){
     const ql = q.toLowerCase();
     items = items.filter(i =>
