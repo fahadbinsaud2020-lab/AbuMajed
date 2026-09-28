@@ -219,6 +219,18 @@
   body.view-only #panel-add{display:none !important;}
   body.view-only #panel-track{display:block !important;}
 
+  .tx-actions{ display:flex; gap:4px; flex-shrink:0; margin-inline-start:4px; }
+  .tx-btn{
+    background:transparent; border:none; cursor:pointer; font-size:14px;
+    padding:5px 6px; border-radius:8px; line-height:1;
+  }
+  .tx-btn:hover{ background:var(--parchment); }
+  .cancel-edit-btn{
+    width:100%; margin-top:8px; padding:12px; border:none; border-radius:12px;
+    font-family:'Tajawal'; font-weight:700; font-size:14px; cursor:pointer;
+    background:var(--parchment); color:var(--ink-soft); display:none;
+  }
+
   .empty{
     text-align:center; padding:40px 12px; color:var(--ink-soft); font-size:14px;
   }
@@ -306,6 +318,7 @@
         <textarea id="notes" placeholder="أي تفاصيل إضافية..."></textarea>
 
         <button type="submit" class="save-btn exp" id="submitBtn">حفظ في الشيت</button>
+        <button type="button" class="cancel-edit-btn" id="cancelEditBtn">إلغاء التعديل</button>
         <div class="msg" id="formMsg"></div>
       </form>
     </div>
@@ -529,10 +542,80 @@ function renderList(){
         <div class="meta">${i.type==='expense' ? escapeHtml(i.target||'') + ' · ' : ''}${escapeHtml(i.date||'')}</div>
       </div>
       <div class="amt">${i.type==='expense'?'-':'+'}${fmt(i.amount)}</div>
+      ${VIEW_ONLY ? '' : `
+      <div class="tx-actions">
+        <button type="button" class="tx-btn edit" data-row="${i.row}" data-type="${i.type}" title="تعديل">✏️</button>
+        <button type="button" class="tx-btn del" data-row="${i.row}" data-type="${i.type}" title="حذف">🗑️</button>
+      </div>`}
     `;
     wrap.appendChild(row);
   });
 }
+
+// ---------- تعديل وحذف السجلات ----------
+let editingRow = null;
+let editingType = null;
+
+function findItem_(row, type){
+  const list = type==='expense' ? cache.expenses : cache.income;
+  return list.find(x=>x.row===row);
+}
+
+function startEdit(row, type){
+  const item = findItem_(row, type);
+  if(!item) return;
+  editingRow = row; editingType = type;
+
+  document.querySelector('.tab-btn[data-tab="add"]').click();
+  document.querySelector(`.segmented button[data-type="${type}"]`).click();
+
+  document.getElementById('desc').value = item.desc || '';
+  document.getElementById('amount').value = item.amount || '';
+  document.getElementById('notes').value = item.notes || '';
+  const parts = String(item.date||'').split(/[-\/]/);
+  if(parts.length===3){
+    document.getElementById('date').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  if(type==='expense'){
+    document.getElementById('target').value = item.target || '';
+  }
+
+  document.getElementById('submitBtn').textContent = 'تحديث السجل';
+  document.getElementById('cancelEditBtn').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelEdit(){
+  editingRow = null; editingType = null;
+  document.getElementById('entryForm').reset();
+  document.getElementById('date').valueAsDate = new Date();
+  document.getElementById('submitBtn').textContent = 'حفظ في الشيت';
+  document.getElementById('submitBtn').className = 'save-btn ' + (activeType==='expense' ? 'exp':'inc');
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+document.getElementById('cancelEditBtn').addEventListener('click', cancelEdit);
+
+async function deleteRecord(row, type){
+  if(!confirm('متأكد تبي تحذف هذا السجل؟ لا يمكن التراجع.')) return;
+  const action = type==='expense' ? 'deleteExpense' : 'deleteIncome';
+  try{
+    await fetch(webAppUrl, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action, row })
+    });
+    await fetchData();
+  }catch(err){
+    alert('تعذر الحذف، تأكد من الاتصال وحاول مرة أخرى');
+  }
+}
+
+document.getElementById('txList').addEventListener('click', (e)=>{
+  const editBtn = e.target.closest('.tx-btn.edit');
+  const delBtn = e.target.closest('.tx-btn.del');
+  if(editBtn){ startEdit(Number(editBtn.dataset.row), editBtn.dataset.type); }
+  if(delBtn){ deleteRecord(Number(delBtn.dataset.row), delBtn.dataset.type); }
+});
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -555,19 +638,25 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   const [y,m,d] = dateVal.split('-');
   const dateStr = `${d}-${m}-${y}`;
 
+  const isEditing = editingRow !== null;
   const payload = {
-    action: activeType==='expense' ? 'addExpense' : 'addIncome',
+    action: isEditing
+      ? (editingType==='expense' ? 'updateExpense' : 'updateIncome')
+      : (activeType==='expense' ? 'addExpense' : 'addIncome'),
     desc: document.getElementById('desc').value,
     amount: document.getElementById('amount').value,
     date: dateStr,
     notes: document.getElementById('notes').value,
   };
-  if(activeType==='expense'){
+  if(isEditing){
+    payload.row = editingRow;
+  }
+  if((isEditing ? editingType : activeType) === 'expense'){
     payload.target = document.getElementById('target').value;
   }
 
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="loader"></span> جارٍ الحفظ...';
+  submitBtn.innerHTML = `<span class="loader"></span> ${isEditing ? 'جارٍ التحديث...' : 'جارٍ الحفظ...'}`;
 
   try{
     // نستخدم no-cors لأن استجابة POST عبر رابط إعادة توجيه Apps Script
@@ -580,25 +669,32 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
       body: JSON.stringify(payload)
     });
 
-    const before = cache.income.length + cache.expenses.length;
-    await fetchData();
-    const after = cache.income.length + cache.expenses.length;
-
-    if(after > before){
-      msg.textContent = 'تم الحفظ في الشيت بنجاح ✅';
+    if(isEditing){
+      await fetchData();
+      msg.textContent = 'تم تحديث السجل بنجاح ✅';
       msg.className = 'msg ok';
-      document.getElementById('entryForm').reset();
-      document.getElementById('date').valueAsDate = new Date();
+      cancelEdit();
     } else {
-      msg.textContent = 'لم يتأكد الحفظ — تحقق من الشيت أو من رابط الويب في الإعدادات';
-      msg.className = 'msg err';
+      const before = cache.income.length + cache.expenses.length;
+      await fetchData();
+      const after = cache.income.length + cache.expenses.length;
+
+      if(after > before){
+        msg.textContent = 'تم الحفظ في الشيت بنجاح ✅';
+        msg.className = 'msg ok';
+        document.getElementById('entryForm').reset();
+        document.getElementById('date').valueAsDate = new Date();
+      } else {
+        msg.textContent = 'لم يتأكد الحفظ — تحقق من الشيت أو من رابط الويب في الإعدادات';
+        msg.className = 'msg err';
+      }
     }
   }catch(err){
-    msg.textContent = 'تعذر الحفظ، تأكد من رابط الويب في الإعدادات';
+    msg.textContent = isEditing ? 'تعذر التحديث، حاول مرة أخرى' : 'تعذر الحفظ، تأكد من رابط الويب في الإعدادات';
     msg.className = 'msg err';
   }finally{
     submitBtn.disabled = false;
-    submitBtn.innerHTML = 'حفظ في الشيت';
+    if(editingRow === null){ submitBtn.innerHTML = 'حفظ في الشيت'; }
   }
 });
 
