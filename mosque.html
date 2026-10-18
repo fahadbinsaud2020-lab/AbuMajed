@@ -194,6 +194,15 @@
     color:var(--teal-900); cursor:pointer; white-space:nowrap;
   }
   .sort-btn:hover{border-color:var(--gold);}
+  .type-filter{display:flex; background:var(--parchment); border-radius:12px; padding:4px; margin-bottom:12px;}
+  .type-filter button{
+    flex:1; padding:10px 6px; border:none; background:transparent;
+    font-family:'Tajawal'; font-weight:700; font-size:13.5px;
+    border-radius:9px; cursor:pointer; color:var(--ink-soft);
+  }
+  .type-filter button.active{background:var(--teal-900); color:#fff;}
+  .type-filter button.active.exp{background:var(--red);}
+  .type-filter button.active.inc{background:var(--green);}
   .date-wrap{position:relative; display:flex; gap:8px;}
   .date-wrap #date{
     flex:1; width:auto; min-width:0; text-align:center;
@@ -359,6 +368,11 @@
       <input type="text" class="searchbox" id="search" placeholder="ابحث عن بيان أو جهة..." />
       <button type="button" class="sort-btn" id="sortBtn" title="تغيير ترتيب القائمة حسب التاريخ"></button>
     </div>
+    <div class="type-filter" id="typeFilter">
+      <button type="button" class="active" data-view="all">الكل</button>
+      <button type="button" class="exp" data-view="expense">المصروفات 🔴</button>
+      <button type="button" class="inc" data-view="income">الوارد 🟢</button>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="filter-summary" id="filterSummary"></div>
     <div id="txList"></div>
@@ -396,6 +410,7 @@ let webAppUrl = DEFAULT_WEB_APP_URL;
 let cache = { income: [], expenses: [], totals: {income:0, expense:0, remaining:0}, targets: [] };
 let activeType = 'expense';
 let activeChip = 'الكل';
+let activeView = 'all'; // all | expense | income
 
 const fmt = n => (Number(n)||0).toLocaleString('ar-SA', {maximumFractionDigits:2});
 
@@ -552,6 +567,21 @@ document.getElementById('sortBtn').addEventListener('click', ()=>{
 });
 updateSortBtn();
 
+// ---------- فلتر نوع القيد: الكل / المصروفات / الوارد ----------
+function setView(v){
+  activeView = v;
+  if(v === 'income') activeChip = 'الكل'; // الوارد ما له جهة صرف
+  document.querySelectorAll('#typeFilter button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.view === v);
+  });
+  document.getElementById('chips').style.display = (v === 'income') ? 'none' : '';
+  renderChips();
+  renderList();
+}
+document.querySelectorAll('#typeFilter button').forEach(b=>{
+  b.addEventListener('click', ()=> setView(b.dataset.view));
+});
+
 setDateToday();
 
 // ---------- جلب البيانات ----------
@@ -602,7 +632,12 @@ function renderChips(){
     const c = document.createElement('button');
     c.className = 'chip' + (t===activeChip ? ' active':'');
     c.textContent = t;
-    c.onclick = () => { activeChip = t; renderChips(); renderList(); };
+    c.onclick = () => {
+      activeChip = t;
+      // اختيار جهة صرف معيّنة يعني عرض المصروفات فقط
+      if(t !== 'الكل' && activeView === 'all'){ setView('expense'); }
+      else { renderChips(); renderList(); }
+    };
     wrap.appendChild(c);
   });
 }
@@ -610,7 +645,11 @@ function renderChips(){
 
 function renderFilterSummary(chipItems){
   const box = document.getElementById('filterSummary');
-  if(activeChip === 'الكل'){
+  let label = '';
+  if(activeChip !== 'الكل') label = 'إجمالي «' + activeChip + '»';
+  else if(activeView === 'expense') label = 'إجمالي المصروفات';
+  else if(activeView === 'income') label = 'إجمالي الوارد';
+  if(!label){
     box.style.display = 'none';
     box.innerHTML = '';
     return;
@@ -619,7 +658,7 @@ function renderFilterSummary(chipItems){
   box.style.display = 'flex';
   box.innerHTML = `
     <div>
-      <div class="fs-label">إجمالي «${escapeHtml(activeChip)}»</div>
+      <div class="fs-label">${escapeHtml(label)}</div>
       <div class="fs-count">${chipItems.length} قيد</div>
     </div>
     <div class="fs-amount">${fmt(total)}</div>
@@ -633,8 +672,10 @@ function renderList(){
     ...cache.income.map(i=>({...i, type:'income', target:''}))
   ];
   let chipItems = base;
+  if(activeView === 'expense') chipItems = base.filter(i => i.type === 'expense');
+  else if(activeView === 'income') chipItems = base.filter(i => i.type === 'income');
   if(activeChip !== 'الكل'){
-    chipItems = base.filter(i => i.type==='income' ? false : i.target===activeChip);
+    chipItems = chipItems.filter(i => i.type === 'expense' && i.target === activeChip);
   }
   renderFilterSummary(chipItems);
 
@@ -660,7 +701,10 @@ function renderList(){
   const wrap = document.getElementById('txList');
   wrap.innerHTML = '';
   if(!items.length){
-    wrap.innerHTML = '<div class="empty"><b>لا توجد قيود بعد</b>ابدأ بإضافة أول مصروف أو وارد من تبويب "إضافة قيد"</div>';
+    const hasAny = (cache.income.length + cache.expenses.length) > 0;
+    wrap.innerHTML = hasAny
+      ? '<div class="empty"><b>لا توجد نتائج مطابقة</b>جرّب تغيير الفلتر أو كلمة البحث</div>'
+      : '<div class="empty"><b>لا توجد قيود بعد</b>ابدأ بإضافة أول مصروف أو وارد من تبويب "إضافة قيد"</div>';
     return;
   }
   items.forEach(i=>{
