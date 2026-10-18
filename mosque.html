@@ -186,6 +186,30 @@
   .chip.active{background:var(--teal-900); color:#fff; border-color:var(--teal-900);}
 
   .searchbox{margin-bottom:14px;}
+  .toolbar{display:flex; gap:8px; margin-bottom:14px;}
+  .toolbar .searchbox{margin-bottom:0; flex:1; min-width:0;}
+  .sort-btn{
+    flex-shrink:0; padding:0 14px; border-radius:10px; border:1px solid var(--line);
+    background:var(--paper); font-family:'Tajawal'; font-weight:700; font-size:12.5px;
+    color:var(--teal-900); cursor:pointer; white-space:nowrap;
+  }
+  .sort-btn:hover{border-color:var(--gold);}
+  .date-wrap{position:relative; display:flex; gap:8px;}
+  .date-wrap #date{
+    flex:1; width:auto; min-width:0; text-align:center;
+    font-family:'Reem Kufi', sans-serif; font-size:17px; letter-spacing:1.5px;
+  }
+  .date-pick{
+    flex-shrink:0; width:48px; border:1px solid var(--line); border-radius:10px;
+    background:#fff; font-size:18px; cursor:pointer;
+  }
+  .date-pick:hover{border-color:var(--gold);}
+  .date-native{
+    position:absolute; bottom:0; inset-inline-end:0; width:1px; height:1px;
+    opacity:0; pointer-events:none; border:0; padding:0;
+  }
+  .field-hint{font-size:11.5px; color:var(--ink-soft); margin-top:6px;}
+  .field-hint.err{color:var(--red); font-weight:700;}
 
   .tx{
     display:flex; align-items:center; gap:12px;
@@ -312,7 +336,12 @@
         <input type="number" id="amount" inputmode="decimal" step="0.01" placeholder="0.00" required />
 
         <label for="date">التاريخ</label>
-        <input type="date" id="date" required />
+        <div class="date-wrap">
+          <input type="text" id="date" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD-MM-YYYY" dir="ltr" required />
+          <button type="button" class="date-pick" id="datePickBtn" aria-label="اختيار من التقويم" title="اختيار من التقويم">📅</button>
+          <input type="date" id="datePicker" class="date-native" tabindex="-1" aria-hidden="true" />
+        </div>
+        <div class="field-hint" id="dateHint">الصيغة: يوم-شهر-سنة، مثال: 25-09-2026</div>
 
         <label for="notes">ملاحظات (اختياري)</label>
         <textarea id="notes" placeholder="أي تفاصيل إضافية..."></textarea>
@@ -326,7 +355,10 @@
 
   <!-- ===== المتابعة ===== -->
   <div class="panel" id="panel-track">
-    <input type="text" class="searchbox" id="search" placeholder="ابحث عن بيان أو جهة..." />
+    <div class="toolbar">
+      <input type="text" class="searchbox" id="search" placeholder="ابحث عن بيان أو جهة..." />
+      <button type="button" class="sort-btn" id="sortBtn" title="تغيير ترتيب القائمة حسب التاريخ"></button>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="filter-summary" id="filterSummary"></div>
     <div id="txList"></div>
@@ -424,7 +456,103 @@ document.querySelectorAll('.segmented button').forEach(btn=>{
 });
 
 // تاريخ اليوم افتراضي (بصيغة yyyy-mm-dd لحقل input date)
-document.getElementById('date').valueAsDate = new Date();
+// ---------- التاريخ: فورمات ثابتة DD-MM-YYYY ----------
+function pad2(n){ return String(n).padStart(2,'0'); }
+function todayDMY(){
+  const t = new Date();
+  return pad2(t.getDate()) + '-' + pad2(t.getMonth()+1) + '-' + t.getFullYear();
+}
+
+// يقرأ أي صيغة شائعة (25-09-2026 / 25/09/2026 / 1\5\2026 / 26-092026 / 2026-09-25)
+// ويرجع {d,m,y,ts} أو null إذا التاريخ غير صالح
+function parseAnyDate(s){
+  if(s === null || s === undefined) return null;
+  const str = String(s).trim();
+  if(!str) return null;
+  let d, m, y;
+  const iso = str.match(/^(\d{4})[-\/.\\](\d{1,2})[-\/.\\](\d{1,2})/);
+  if(iso){
+    y = +iso[1]; m = +iso[2]; d = +iso[3];
+  } else {
+    const nums = str.match(/\d+/g) || [];
+    if(nums.length === 3){
+      d = +nums[0]; m = +nums[1]; y = +nums[2];
+    } else if(nums.length === 2 && nums[1].length === 6){
+      d = +nums[0]; m = +nums[1].slice(0,2); y = +nums[1].slice(2);
+    } else if(nums.length === 1 && nums[0].length === 8){
+      d = +nums[0].slice(0,2); m = +nums[0].slice(2,4); y = +nums[0].slice(4);
+    } else {
+      return null;
+    }
+    if(y < 100) y += 2000;
+  }
+  if(y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, m-1, d);
+  if(dt.getFullYear() !== y || dt.getMonth() !== m-1 || dt.getDate() !== d) return null;
+  return { d: d, m: m, y: y, ts: dt.getTime() };
+}
+
+function fmtDate(s){
+  const p = parseAnyDate(s);
+  return p ? (pad2(p.d) + '-' + pad2(p.m) + '-' + p.y) : String(s || '');
+}
+
+const dateInput = document.getElementById('date');
+const dateHint = document.getElementById('dateHint');
+const DATE_HINT = dateHint.textContent;
+function setDateHint(msg){
+  if(msg){ dateHint.textContent = msg; dateHint.classList.add('err'); }
+  else { dateHint.textContent = DATE_HINT; dateHint.classList.remove('err'); }
+}
+function setDateToday(){ dateInput.value = todayDMY(); setDateHint(); }
+function maskDate(v){
+  v = v.replace(/\D/g,'').slice(0,8);
+  if(v.length > 4) return v.slice(0,2) + '-' + v.slice(2,4) + '-' + v.slice(4);
+  if(v.length > 2) return v.slice(0,2) + '-' + v.slice(2);
+  return v;
+}
+dateInput.addEventListener('input', ()=>{ dateInput.value = maskDate(dateInput.value); setDateHint(); });
+dateInput.addEventListener('paste', (e)=>{
+  const txt = (e.clipboardData || window.clipboardData).getData('text');
+  const p = parseAnyDate(txt);
+  if(p){
+    e.preventDefault();
+    dateInput.value = pad2(p.d) + '-' + pad2(p.m) + '-' + p.y;
+    setDateHint();
+  }
+});
+const datePicker = document.getElementById('datePicker');
+document.getElementById('datePickBtn').addEventListener('click', ()=>{
+  const p = parseAnyDate(dateInput.value);
+  if(p) datePicker.value = p.y + '-' + pad2(p.m) + '-' + pad2(p.d);
+  try{ datePicker.showPicker(); }catch(err){ datePicker.focus(); datePicker.click(); }
+});
+datePicker.addEventListener('change', ()=>{
+  if(!datePicker.value) return;
+  const parts = datePicker.value.split('-');
+  dateInput.value = parts[2] + '-' + parts[1] + '-' + parts[0];
+  setDateHint();
+});
+
+// ---------- ترتيب القائمة حسب التاريخ ----------
+const SORT_KEY = 'sort-dir:' + location.pathname;
+let sortDir = 'desc'; // الأحدث أولاً (الأنسب للمتابعة)
+try{
+  const sv = localStorage.getItem(SORT_KEY);
+  if(sv === 'asc' || sv === 'desc') sortDir = sv;
+}catch(err){}
+function updateSortBtn(){
+  document.getElementById('sortBtn').textContent = sortDir === 'desc' ? '↓ الأحدث أولاً' : '↑ الأقدم أولاً';
+}
+document.getElementById('sortBtn').addEventListener('click', ()=>{
+  sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  try{ localStorage.setItem(SORT_KEY, sortDir); }catch(err){}
+  updateSortBtn();
+  renderList();
+});
+updateSortBtn();
+
+setDateToday();
 
 // ---------- جلب البيانات ----------
 async function fetchData(){
@@ -479,11 +607,6 @@ function renderChips(){
   });
 }
 
-function parseDMY(d){
-  const p = String(d).split(/[-\/]/);
-  if(p.length===3) return new Date(p[2].length===4? p[2]+'-'+p[1]+'-'+p[0] : d);
-  return new Date(d);
-}
 
 function renderFilterSummary(chipItems){
   const box = document.getElementById('filterSummary');
@@ -524,7 +647,15 @@ function renderList(){
       (i.notes||'').toLowerCase().includes(ql)
     );
   }
-  items.sort((a,b)=> parseDMY(b.date) - parseDMY(a.date));
+  items.sort((a,b)=>{
+    const pa = parseAnyDate(a.date), pb = parseAnyDate(b.date);
+    if(!pa && !pb) return b.row - a.row;   // تواريخ غير صالحة: في النهاية
+    if(!pa) return 1;
+    if(!pb) return -1;
+    if(pa.ts !== pb.ts) return sortDir === 'desc' ? pb.ts - pa.ts : pa.ts - pb.ts;
+    // نفس اليوم: الأحدث إدخالاً (رقم الصف الأكبر) أولاً في التنازلي
+    return sortDir === 'desc' ? (b.row - a.row) : (a.row - b.row);
+  });
 
   const wrap = document.getElementById('txList');
   wrap.innerHTML = '';
@@ -539,7 +670,7 @@ function renderList(){
       <span class="dot"></span>
       <div class="body">
         <div class="desc">${escapeHtml(i.desc||'—')}</div>
-        <div class="meta">${i.type==='expense' ? escapeHtml(i.target||'') + ' · ' : ''}${escapeHtml(i.date||'')}</div>
+        <div class="meta">${i.type==='expense' ? escapeHtml(i.target||'') + ' · ' : ''}${escapeHtml(fmtDate(i.date))}</div>
       </div>
       <div class="amt">${i.type==='expense'?'-':'+'}${fmt(i.amount)}</div>
       ${VIEW_ONLY ? '' : `
@@ -572,9 +703,13 @@ function startEdit(row, type){
   document.getElementById('desc').value = item.desc || '';
   document.getElementById('amount').value = item.amount || '';
   document.getElementById('notes').value = item.notes || '';
-  const parts = String(item.date||'').split(/[-\/]/);
-  if(parts.length===3){
-    document.getElementById('date').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+  const pd = parseAnyDate(item.date);
+  if(pd){
+    dateInput.value = pad2(pd.d) + '-' + pad2(pd.m) + '-' + pd.y;
+    setDateHint();
+  } else {
+    dateInput.value = '';
+    setDateHint('التاريخ المسجّل غير صالح، اكتب التاريخ الصحيح بصيغة يوم-شهر-سنة');
   }
   if(type==='expense'){
     document.getElementById('target').value = item.target || '';
@@ -588,7 +723,7 @@ function startEdit(row, type){
 function cancelEdit(){
   editingRow = null; editingType = null;
   document.getElementById('entryForm').reset();
-  document.getElementById('date').valueAsDate = new Date();
+  setDateToday();
   document.getElementById('submitBtn').textContent = 'حفظ في الشيت';
   document.getElementById('submitBtn').className = 'save-btn ' + (activeType==='expense' ? 'exp':'inc');
   document.getElementById('cancelEditBtn').style.display = 'none';
@@ -634,9 +769,13 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   const msg = document.getElementById('formMsg');
   msg.className = 'msg';
 
-  const dateVal = document.getElementById('date').value; // yyyy-mm-dd
-  const [y,m,d] = dateVal.split('-');
-  const dateStr = `${d}-${m}-${y}`;
+  const dp = /^\d{2}-\d{2}-\d{4}$/.test(dateInput.value) ? parseAnyDate(dateInput.value) : null;
+  if(!dp){
+    setDateHint('اكتب التاريخ كاملاً بصيغة يوم-شهر-سنة، مثال: 25-09-2026');
+    dateInput.focus();
+    return;
+  }
+  const dateStr = pad2(dp.d) + '-' + pad2(dp.m) + '-' + dp.y;
 
   const isEditing = editingRow !== null;
   const payload = {
@@ -683,7 +822,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
         msg.textContent = 'تم الحفظ في الشيت بنجاح ✅';
         msg.className = 'msg ok';
         document.getElementById('entryForm').reset();
-        document.getElementById('date').valueAsDate = new Date();
+        setDateToday();
       } else {
         msg.textContent = 'لم يتأكد الحفظ — تحقق من الشيت أو من رابط الويب في الإعدادات';
         msg.className = 'msg err';
