@@ -90,6 +90,20 @@
     position:relative; z-index:1;
   }
 
+  .card-main{ display:block; text-decoration:none; color:inherit; position:relative; z-index:1; }
+  .card-links{
+    margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);
+    position:relative; z-index:1;
+  }
+  .link-btn{
+    flex:1; text-align:center; padding:9px 8px; border-radius:10px;
+    border:1px solid var(--line); background:#fff; cursor:pointer;
+    font-family:'Tajawal', sans-serif; font-weight:700; font-size:12.5px;
+    color:var(--teal-900); text-decoration:none;
+  }
+  .link-btn:hover{ border-color:var(--gold); }
+  .follow-btn{ display:block; }
+
   .empty-slot{
     border:1.5px dashed var(--line); border-radius:20px; padding:22px 20px;
     display:flex; align-items:center; justify-content:center;
@@ -109,19 +123,29 @@
   </header>
 
   <div class="grid">
-    <a class="tool-card" href="mosque.html">
+    <div class="tool-card">
+      <a class="card-main" href="mosque.html">
       <div class="icon">🕌💰</div>
       <h2>مصروفات المساجد</h2>
       <p>متابعة أنيقة لموارد المساجد ومصروفاتها، مباشرة من الشيت</p>
       <div class="go">فتح الأداة ←</div>
-    </a>
+      </a>
+      <div class="card-links">
+        <a class="link-btn follow-btn" href="mosque.html?view=1&amp;portal=1">📊 المتابعة</a>
+      </div>
+    </div>
 
-    <a class="tool-card" href="villa.html">
+    <div class="tool-card">
+      <a class="card-main" href="villa.html">
       <div class="icon">🏗️💰</div>
       <h2>فيلا سعد الحربي</h2>
       <p>متابعة أنيقة لمصروفات ووارد الفيلا، مباشرة من الشيت</p>
       <div class="go">فتح الأداة ←</div>
-    </a>
+      </a>
+      <div class="card-links">
+        <a class="link-btn follow-btn" href="villa.html?view=1&amp;portal=1">📊 المتابعة</a>
+      </div>
+    </div>
 
     <div class="empty-slot">هنا تظهر أداتك القادمة</div>
   </div>

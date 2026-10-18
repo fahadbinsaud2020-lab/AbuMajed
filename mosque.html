@@ -72,6 +72,22 @@
     cursor:pointer; box-shadow:var(--shadow); flex-shrink:0;
   }
   .gear-btn svg{width:20px; height:20px; stroke:var(--teal-900);}
+  header.top{gap:8px;}
+  header.top > div:first-child{flex:1; min-width:0;}
+  .share-btn{
+    background:var(--paper); border:1px solid var(--line);
+    width:42px; height:42px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:var(--shadow); flex-shrink:0;
+  }
+  .share-btn svg{width:20px; height:20px; stroke:var(--teal-900);}
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--teal-900); color:#fff; padding:11px 18px; border-radius:12px;
+    font-size:13.5px; box-shadow:var(--shadow); opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s; z-index:60; max-width:90%; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   /* ===== بطاقات الملخص بشكل محراب ===== */
   .arches{
@@ -248,6 +264,7 @@
   .filter-summary .fs-amount{font-family:'Reem Kufi'; font-size:20px; color:var(--gold-light);}
 
   body.view-only .gear-btn{display:none;}
+  body.view-only.from-portal .home-link{display:flex;}
   body.view-only .tabs{display:none;}
   body.view-only #panel-add{display:none !important;}
   body.view-only #panel-track{display:block !important;}
@@ -304,7 +321,10 @@
       <h1>مصروفات المساجد</h1>
       <p>متابعة أنيقة لموارد المساجد ومصروفاتها، مباشرة من الشيت</p>
     </div>
-    <a href="index.html" class="gear-btn" style="text-decoration:none; font-size:18px; line-height:1;" aria-label="الرئيسية" title="الرئيسية">🏠</a>
+    <button type="button" class="share-btn" id="shareBtn" aria-label="إرسال رابط المتابعة" title="إرسال رابط المتابعة">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>
+    </button>
+    <a href="index.html" class="gear-btn home-link" style="text-decoration:none; font-size:18px; line-height:1;" aria-label="الرئيسية" title="الرئيسية">🏠</a>
     <button class="gear-btn" id="settingsBtn" aria-label="إعدادات الاتصال">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
@@ -379,6 +399,8 @@
   </div>
 </div>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <!-- ===== إعدادات ===== -->
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -404,7 +426,11 @@ const DEFAULT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzBjYdhDTlU
 
 const urlParams = new URLSearchParams(location.search);
 const VIEW_ONLY = urlParams.get('view') === '1';
-if(VIEW_ONLY){ document.body.classList.add('view-only'); }
+if(VIEW_ONLY){
+  document.body.classList.add('view-only');
+  // القادم من الصفحة الرئيسية يظهر له زر الرجوع 🏠 (رابط الداعمين العادي بدونه)
+  if(urlParams.get('portal') === '1'){ document.body.classList.add('from-portal'); }
+}
 
 let webAppUrl = DEFAULT_WEB_APP_URL;
 let cache = { income: [], expenses: [], totals: {income:0, expense:0, remaining:0}, targets: [] };
@@ -581,6 +607,41 @@ function setView(v){
 document.querySelectorAll('#typeFilter button').forEach(b=>{
   b.addEventListener('click', ()=> setView(b.dataset.view));
 });
+
+// ---------- إرسال رابط المتابعة ----------
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+async function shareFollowLink(){
+  // دائماً رابط العرض فقط، حتى لو فُتحت الشاشة من الأداة الكاملة
+  const url = location.origin + location.pathname + '?view=1';
+  const title = document.querySelector('header.top h1').textContent.trim();
+  if(navigator.share){
+    try{
+      await navigator.share({ title: title, text: title + ' — متابعة المصروفات والوارد', url: url });
+      return;
+    }catch(err){
+      if(err && err.name === 'AbortError') return; // أغلق نافذة المشاركة
+    }
+  }
+  let ok = false;
+  try{ await navigator.clipboard.writeText(url); ok = true; }
+  catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ ok = document.execCommand('copy'); }catch(e2){}
+    document.body.removeChild(ta);
+  }
+  if(ok) showToast('تم نسخ رابط المتابعة، الصقه في واتساب');
+  else window.prompt('انسخ الرابط:', url);
+}
+document.getElementById('shareBtn').addEventListener('click', shareFollowLink);
 
 setDateToday();
 
