@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>التقارير</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400..700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --teal-900:#0B4F45;
+    --teal-700:#136B5D;
+    --gold:#C9982E;
+    --gold-light:#E7CB84;
+    --parchment:#F6F1E4;
+    --paper:#FFFDF8;
+    --ink:#26221D;
+    --ink-soft:#6E6255;
+    --red:#B5493D;
+    --red-bg:#F7E7E3;
+    --green:#4B7A5C;
+    --green-bg:#E6EFE6;
+    --line: rgba(38,34,29,.12);
+    --shadow: 0 10px 30px -12px rgba(11,79,69,.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #ffffff 0%, var(--parchment) 55%),
+      var(--parchment);
+    color:var(--ink);
+    font-family:'Tajawal', sans-serif;
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+  .wrap{max-width:820px; margin:0 auto;}
+  .num{direction:ltr; unicode-bidi:isolate; display:inline-block;}
+
+  .braid{
+    height:10px; margin-bottom:18px;
+    background-image:
+      linear-gradient(45deg, var(--gold) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--gold) 25%, transparent 25%);
+    background-size:14px 14px; opacity:.55; border-radius:6px;
+  }
+  header.top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:20px; }
+  header.top > div:first-child{ flex:1; min-width:0; }
+  header.top h1{ font-family:'Reem Kufi', sans-serif; font-size:30px; margin:0 0 4px; color:var(--teal-900); }
+  header.top p{ margin:0; color:var(--ink-soft); font-size:14px; }
+  .icon-btn{
+    background:var(--paper); border:1px solid var(--line);
+    width:42px; height:42px; border-radius:14px; text-decoration:none; font-size:18px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:var(--shadow); flex-shrink:0;
+  }
+
+  .card{
+    background:var(--paper); border:1px solid var(--line);
+    border-radius:18px; padding:18px; box-shadow:var(--shadow); margin-bottom:16px;
+  }
+
+  /* نمط التقرير: الكل / المصروفات / الإيرادات */
+  .type-switch{ display:flex; background:var(--parchment); border-radius:12px; padding:4px; margin-bottom:14px; }
+  .type-switch button{
+    flex:1; padding:11px 6px; border:none; background:transparent;
+    font-family:'Tajawal'; font-weight:700; font-size:14px;
+    border-radius:9px; cursor:pointer; color:var(--ink-soft);
+  }
+  .type-switch button.active{ background:var(--teal-900); color:#fff; }
+  .type-switch button.active.exp{ background:var(--red); }
+  .type-switch button.active.inc{ background:var(--green); }
+
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .chip{
+    padding:8px 14px; border-radius:20px; border:1px solid var(--line);
+    background:#fff; font-family:'Tajawal'; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;
+  }
+  .chip.active{ background:var(--teal-900); color:#fff; border-color:var(--teal-900); }
+
+  .range{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+  label{ display:block; font-size:13px; color:var(--ink-soft); margin:0 0 6px; font-weight:700; }
+  input, textarea{
+    width:100%; padding:12px 13px; border-radius:10px;
+    border:1px solid var(--line); background:#fff;
+    font-family:'Tajawal'; font-size:15px; color:var(--ink);
+  }
+  input:focus, textarea:focus{ outline:2px solid var(--gold); outline-offset:1px; border-color:var(--gold); }
+  .date-wrap{ position:relative; display:flex; gap:8px; }
+  .date-wrap input[type=text]{
+    flex:1; width:auto; min-width:0; text-align:center;
+    font-family:'Reem Kufi', sans-serif; font-size:16px; letter-spacing:1px;
+  }
+  .date-pick{
+    flex-shrink:0; width:44px; border:1px solid var(--line); border-radius:10px;
+    background:#fff; font-size:18px; cursor:pointer;
+  }
+  .date-pick:hover{ border-color:var(--gold); }
+  .date-native{
+    position:absolute; bottom:0; inset-inline-end:0; width:1px; height:1px;
+    opacity:0; pointer-events:none; border:0; padding:0;
+  }
+  .field-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.8; }
+  .field-hint.err{ color:var(--red); font-weight:700; }
+
+  .actions-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:14px; }
+  .act{
+    padding:12px 6px; border-radius:12px; border:1px solid var(--line); background:#fff;
+    font-family:'Tajawal', sans-serif; font-weight:700; font-size:13.5px; color:var(--teal-900); cursor:pointer;
+  }
+  .act:hover{ border-color:var(--gold); }
+  .act.primary{ background:var(--teal-900); color:#fff; border-color:var(--teal-900); }
+
+  /* ورقة التقرير */
+  .paper{
+    background:#fff; border:1px solid var(--line); border-radius:18px;
+    padding:22px 18px; box-shadow:var(--shadow);
+  }
+  .rp-head{ text-align:center; border-bottom:2px solid var(--gold-light); padding-bottom:14px; margin-bottom:16px; }
+  .rp-brand{ font-size:13px; color:var(--ink-soft); margin-bottom:4px; }
+  .rp-head h2{ font-family:'Reem Kufi', sans-serif; font-size:26px; margin:0 0 6px; color:var(--teal-900); }
+  .rp-period{ font-size:14px; color:var(--ink); }
+  .rp-days{ color:var(--ink-soft); font-size:12.5px; }
+
+  .arches{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
+  .arch{
+    background:var(--paper); border:1px solid var(--line);
+    border-radius:60px 60px 14px 14px; padding:24px 6px 14px; text-align:center; position:relative;
+  }
+  .arch::before{
+    content:""; position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    width:22px; height:22px; border-radius:50%; background:var(--gold-light); opacity:.5;
+  }
+  .arch .big{ font-family:'Reem Kufi', sans-serif; font-size:18px; font-weight:700; position:relative; z-index:1; }
+  .arch .lbl{ font-size:11.5px; color:var(--ink-soft); margin-top:6px; }
+  .arch.income .big{ color:var(--green); }
+  .arch.expense .big{ color:var(--red); }
+  .arch.neutral .big{ color:var(--teal-900); }
+  .arch.remaining{ background:var(--teal-900); border-color:var(--teal-900); }
+  .arch.remaining .big{ color:var(--gold-light); font-size:20px; }
+  .arch.remaining .lbl{ color:#cfe4de; }
+  .arch.remaining::before{ background:var(--gold); }
+
+  .statement{
+    display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center;
+    background:var(--parchment); border-radius:12px; padding:10px 12px; margin-bottom:16px; font-size:13px;
+  }
+  .statement b{ font-family:'Reem Kufi', sans-serif; font-size:14px; color:var(--teal-900); }
+
+  .insights{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:6px; }
+  .ins{ background:var(--parchment); border-radius:12px; padding:11px 12px; }
+  .ins .k{ font-size:11.5px; color:var(--ink-soft); }
+  .ins .v{ font-family:'Reem Kufi', sans-serif; font-size:16px; color:var(--teal-900); margin-top:3px; }
+  .ins .s{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ins .v.bad{ color:var(--red); }
+  .ins .v.good{ color:var(--green); }
+
+  .sec-title{
+    font-family:'Reem Kufi', sans-serif; color:var(--teal-900); font-size:17px;
+    margin:20px 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .sec-title::before{ content:""; width:5px; height:18px; border-radius:3px; background:var(--gold); }
+
+  .bar-row{ margin-bottom:10px; }
+  .bar-top{ display:flex; justify-content:space-between; gap:10px; font-size:13px; margin-bottom:4px; }
+  .bar-top small{ color:var(--ink-soft); }
+  .bar-track{ height:9px; background:var(--parchment); border-radius:6px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg, var(--teal-700), var(--gold)); border-radius:6px; }
+
+  .table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:540px; }
+  th{ background:var(--teal-900); color:#fff; padding:9px 8px; text-align:right; font-weight:700; white-space:nowrap; }
+  td{ padding:8px; border-top:1px solid var(--line); vertical-align:top; }
+  td.inc{ color:var(--green); font-weight:700; }
+  td.exp{ color:var(--red); font-weight:700; }
+  td .desc-note{ display:block; color:var(--ink-soft); font-size:11.5px; margin-top:2px; }
+  .neg{ color:var(--red); }
+  tr.open td, tr.close td{ background:var(--parchment); font-weight:700; }
+  td.none{ text-align:center; color:var(--ink-soft); padding:18px 8px; }
+
+  .note{ font-size:12px; color:var(--ink-soft); margin-top:14px; line-height:1.9; }
+  .note.warn{ color:var(--red); }
+  .state{ text-align:center; padding:44px 12px; color:var(--ink-soft); font-size:14px; line-height:2; }
+  .state b{ color:var(--ink); font-family:'Reem Kufi', sans-serif; font-size:17px; }
+  .empty-block{ text-align:center; padding:26px 10px; color:var(--ink-soft); font-size:14px; background:var(--parchment); border-radius:12px; margin-top:6px; }
+
+  /* نافذة المشاركة والتنبيه */
+  .overlay{
+    position:fixed; inset:0; background:rgba(11,20,17,.55);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--paper); border-radius:18px; padding:22px; max-width:440px; width:100%;
+    max-height:90vh; overflow:auto; box-shadow:0 30px 60px -10px rgba(0,0,0,.4);
+  }
+  .modal h2{ font-family:'Reem Kufi', sans-serif; color:var(--teal-900); margin:0 0 8px; font-size:19px; }
+  .modal p{ font-size:13px; color:var(--ink-soft); line-height:1.9; margin:0 0 12px; }
+  .modal textarea{ font-size:12.5px; line-height:1.9; resize:none; background:var(--parchment); }
+  .share-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .share-opt{
+    display:block; text-align:center; padding:13px 8px; border-radius:12px;
+    border:1px solid var(--line); background:#fff; cursor:pointer;
+    font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px;
+    color:var(--teal-900); text-decoration:none;
+  }
+  .share-opt:hover{ border-color:var(--gold); }
+  .modal .actions{ display:flex; gap:8px; margin-top:16px; }
+  .modal .actions button{ flex:1; padding:12px; border-radius:10px; border:none; font-family:'Tajawal'; font-weight:700; cursor:pointer; }
+  .btn-cancel{ background:var(--parchment); color:var(--ink); }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--teal-900); color:#fff; padding:11px 18px; border-radius:12px;
+    font-size:13.5px; box-shadow:var(--shadow); opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s; z-index:60; max-width:90%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:480px){
+    .arches{ gap:7px; }
+    .arch{ padding:20px 4px 12px; border-radius:44px 44px 10px 10px; }
+    .arch .big{ font-size:14.5px; }
+    .arch.remaining .big{ font-size:15.5px; }
+    .paper{ padding:18px 12px; }
+  }
+
+  /* الطباعة / حفظ PDF */
+  @page{ size:A4; margin:10mm; }
+  @media print{
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body{ background:#fff; padding:0; font-size:12px; }
+    .no-print{ display:none !important; }
+    .wrap{ max-width:none; }
+    .paper{ border:none; box-shadow:none; padding:0; border-radius:0; }
+    .rp-head{ padding-bottom:8px; margin-bottom:10px; }
+    .rp-head h2{ font-size:22px; }
+    .arches{ gap:8px; margin-bottom:10px; }
+    .arch{ box-shadow:none; padding:18px 4px 9px; border-radius:44px 44px 10px 10px; }
+    .arch .big{ font-size:15px; }
+    .statement, .ins{ break-inside:avoid; }
+    .ins{ padding:7px 10px; }
+    .sec-title{ margin:12px 0 8px; break-after:avoid; }
+    .bar-row{ break-inside:avoid; margin-bottom:7px; }
+    .table-wrap{ overflow:visible; border:none; }
+    table{ min-width:0; font-size:11px; }
+    th, td{ padding:4px 6px; }
+    thead{ display:table-header-group; }
+    tr{ break-inside:avoid; }
+    .note{ margin-top:10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="braid no-print"></div>
+
+  <header class="top no-print">
+    <div>
+      <h1>التقارير</h1>
+      <p id="pageSub">تقارير تلقائية من بيانات الشيت</p>
+    </div>
+    <a href="index.html" class="icon-btn" id="homeLink" title="الرئيسية" aria-label="الرئيسية" style="display:none">🏠</a>
+  </header>
+
+  <section class="card no-print" id="controls">
+    <div class="type-switch" id="typeSwitch">
+      <button type="button" data-type="all" class="active">الكل</button>
+      <button type="button" data-type="expense" class="exp">المصروفات 🔴</button>
+      <button type="button" data-type="income" class="inc">الإيرادات 🟢</button>
+    </div>
+
+    <div class="chips" id="presets">
+      <button type="button" class="chip" data-p="last">آخر شهر</button>
+      <button type="button" class="chip" data-p="thisMonth">هذا الشهر</button>
+      <button type="button" class="chip" data-p="prevMonth">الشهر الماضي</button>
+      <button type="button" class="chip" data-p="last3">آخر 3 أشهر</button>
+      <button type="button" class="chip" data-p="year">هذه السنة</button>
+      <button type="button" class="chip" data-p="all">كل الفترات</button>
+    </div>
+
+    <div class="range">
+      <div>
+        <label for="dFrom">من تاريخ</label>
+        <div class="date-wrap">
+          <input type="text" id="dFrom" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD-MM-YYYY" dir="ltr" />
+          <button type="button" class="date-pick" id="bFrom" aria-label="اختيار من التقويم" title="اختيار من التقويم">📅</button>
+          <input type="date" id="pFrom" class="date-native" tabindex="-1" aria-hidden="true" />
+        </div>
+      </div>
+      <div>
+        <label for="dTo">إلى تاريخ</label>
+        <div class="date-wrap">
+          <input type="text" id="dTo" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD-MM-YYYY" dir="ltr" />
+          <button type="button" class="date-pick" id="bTo" aria-label="اختيار من التقويم" title="اختيار من التقويم">📅</button>
+          <input type="date" id="pTo" class="date-native" tabindex="-1" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+    <div class="field-hint" id="rangeHint"></div>
+
+    <div class="actions-row">
+      <button type="button" class="act primary" id="btnPdf">🖨️ حفظ PDF</button>
+      <button type="button" class="act" id="btnShare">📤 مشاركة</button>
+      <button type="button" class="act" id="btnCsv">📥 Excel</button>
+    </div>
+    <div class="field-hint">«حفظ PDF» يفتح نافذة الطباعة، اختر منها «حفظ كملف PDF». ملف Excel يُنزَّل جاهزاً بالأرقام والتواريخ.</div>
+  </section>
+
+  <main class="paper" id="report"><div class="state">جارٍ تحميل البيانات…</div></main>
+</div>
+
+<div class="toast no-print" id="toast" role="status" aria-live="polite"></div>
+
+<div class="overlay no-print" id="shareOverlay">
+  <div class="modal">
+    <h2>مشاركة التقرير</h2>
+    <p>يُرسَل ملخص التقرير مع رابط يفتح نفس التقرير والفترة للعرض فقط. وللحصول على ملف استخدم «حفظ PDF» أو «Excel».</p>
+    <textarea id="shareText" readonly rows="9"></textarea>
+    <div class="share-grid">
+      <a class="share-opt" id="shWhats" target="_blank" rel="noopener">📱 واتساب</a>
+      <a class="share-opt" id="shTele" target="_blank" rel="noopener">✈️ تيليجرام</a>
+      <a class="share-opt" id="shMail">✉️ البريد</a>
+      <button type="button" class="share-opt" id="shCopyText">📋 نسخ الملخص</button>
+      <button type="button" class="share-opt" id="shCopyLink">🔗 نسخ الرابط</button>
+      <button type="button" class="share-opt" id="shMore">⋯ خيارات أخرى</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-cancel" id="shClose">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================= الإعدادات =================
+const APPS = {
+  mosque: { title:'مصروفات المساجد', icon:'🕌', fileName:'مصروفات-المساجد', url:'https://script.google.com/macros/s/AKfycbzBjYdhDTlUQTNnwmPMFah0KR57fCPpNfIRcpSdtp9WBZ4h3IZNiLluCxevlGwZ5yzpPg/exec' },
+  villa:  { title:'فيلا سعد الحربي', icon:'🏗️', fileName:'فيلا-سعد-الحربي', url:'https://script.google.com/macros/s/AKfycbx6kIc-OMXJ4lB-LJn_URJUKMhOnAZly-8vZmb-WBZ3FrYGKMZUbvWdKtY74cfmOimAFQ/exec' }
+};
+const TYPES = {
+  all:     { label:'الكل',      title:'التقرير الشامل',  file:'الشامل' },
+  expense: { label:'المصروفات', title:'تقرير المصروفات', file:'المصروفات' },
+  income:  { label:'الإيرادات', title:'تقرير الإيرادات', file:'الإيرادات' }
+};
+
+const params = new URLSearchParams(location.search);
+const APP = APPS[params.get('app')] || null;
+const FROM_PORTAL = params.get('portal') === '1';
+let reportType = TYPES[params.get('type')] ? params.get('type') : 'all';
+let DATA = null;
+let REPORT = null;
+let range = { from:null, to:null };
+let activePreset = null;
+
+// ================= أدوات =================
+const el = id => document.getElementById(id);
+const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+const n = v => nf.format(Number(v) || 0);
+const signed = v => (v > 0 ? '+' : (v < 0 ? '−' : '')) + nf.format(Math.abs(Number(v) || 0));
+function pad2(x){ return String(x).padStart(2, '0'); }
+function esc(s){
+  return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function shiftDays(d, k){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() + k); }
+function addMonths(d, k){
+  const y = d.getFullYear(), m = d.getMonth() + k, day = d.getDate();
+  const last = new Date(y, m + 1, 0).getDate();
+  return new Date(y, m, Math.min(day, last));
+}
+function fmtDMY(d){ return pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear(); }
+function daysLabel(k){ return k === 1 ? 'يوم واحد' : (k === 2 ? 'يومان' : (k <= 10 ? k + ' أيام' : k + ' يوماً')); }
+
+// يقرأ أي صيغة شائعة ويرجع {d,m,y,ts} أو null
+function parseAnyDate(s){
+  if(s === null || s === undefined) return null;
+  const str = String(s).trim();
+  if(!str) return null;
+  let d, m, y;
+  const iso = str.match(/^(\d{4})[-\/.\\](\d{1,2})[-\/.\\](\d{1,2})/);
+  if(iso){
+    y = +iso[1]; m = +iso[2]; d = +iso[3];
+  } else {
+    const nums = str.match(/\d+/g) || [];
+    if(nums.length === 3){
+      d = +nums[0]; m = +nums[1]; y = +nums[2];
+    } else if(nums.length === 2 && nums[1].length === 6){
+      d = +nums[0]; m = +nums[1].slice(0,2); y = +nums[1].slice(2);
+    } else if(nums.length === 1 && nums[0].length === 8){
+      d = +nums[0].slice(0,2); m = +nums[0].slice(2,4); y = +nums[0].slice(4);
+    } else {
+      return null;
+    }
+    if(y < 100) y += 2000;
+  }
+  if(y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, m-1, d);
+  if(dt.getFullYear() !== y || dt.getMonth() !== m-1 || dt.getDate() !== d) return null;
+  return { d: d, m: m, y: y, ts: dt.getTime() };
+}
+function maskDate(v){
+  v = v.replace(/\D/g,'').slice(0,8);
+  if(v.length > 4) return v.slice(0,2) + '-' + v.slice(2,4) + '-' + v.slice(4);
+  if(v.length > 2) return v.slice(0,2) + '-' + v.slice(2);
+  return v;
+}
+
+// ================= حساب التقرير =================
+function computeReport(from, to){
+  const fromTs = from.getTime(), toTs = to.getTime();
+  const days = Math.round((toTs - fromTs) / 86400000) + 1;
+  const all = [];
+  let invalid = 0;
+  (DATA.income || []).forEach(i => {
+    const p = parseAnyDate(i.date);
+    if(!p){ invalid++; return; }
+    all.push({ type:'income', ts:p.ts, row:i.row, date:pad2(p.d)+'-'+pad2(p.m)+'-'+p.y, desc:i.desc, target:'', amount:Number(i.amount)||0, notes:i.notes });
+  });
+  (DATA.expenses || []).forEach(e => {
+    const p = parseAnyDate(e.date);
+    if(!p){ invalid++; return; }
+    all.push({ type:'expense', ts:p.ts, row:e.row, date:pad2(p.d)+'-'+pad2(p.m)+'-'+p.y, desc:e.desc, target:e.target||'', amount:Number(e.amount)||0, notes:e.notes });
+  });
+
+  let opening = 0;
+  const rows = [];
+  all.forEach(x => {
+    if(x.ts < fromTs) opening += (x.type === 'income' ? x.amount : -x.amount);
+    else if(x.ts <= toTs) rows.push(x);
+  });
+  rows.sort((a, b) => (a.ts - b.ts) || (a.type === b.type ? a.row - b.row : (a.type === 'income' ? -1 : 1)));
+
+  let bal = opening, income = 0, expense = 0, cumI = 0, cumE = 0;
+  const byT = {};
+  rows.forEach(x => {
+    if(x.type === 'income'){
+      income += x.amount; bal += x.amount; cumI += x.amount; x.cum = cumI;
+    } else {
+      expense += x.amount; bal -= x.amount; cumE += x.amount; x.cum = cumE;
+      const k = x.target || 'غير محدد';
+      if(!byT[k]) byT[k] = { name:k, total:0, count:0 };
+      byT[k].total += x.amount; byT[k].count++;
+    }
+    x.balance = bal;
+  });
+  const incRows = rows.filter(x => x.type === 'income');
+  const expRows = rows.filter(x => x.type === 'expense');
+  const byTarget = Object.keys(byT).map(k => byT[k]).sort((a, b) => b.total - a.total);
+  byTarget.forEach(t => {
+    const pct = expense > 0 ? t.total / expense * 100 : 0;
+    t.pct = pct;
+    t.pctLabel = (pct > 0 && pct < 1) ? '<1%' : Math.round(pct) + '%';
+  });
+  const pick = list => list.reduce((m, x) => (!m || x.amount > m.amount) ? x : m, null);
+
+  // الفترة السابقة (بنفس المدة) للمقارنة
+  const prevTo = shiftDays(from, -1).getTime();
+  const prevFrom = shiftDays(from, -days).getTime();
+  let prevIncome = 0, prevExpense = 0;
+  all.forEach(x => {
+    if(x.ts >= prevFrom && x.ts <= prevTo){
+      if(x.type === 'income') prevIncome += x.amount; else prevExpense += x.amount;
+    }
+  });
+
+  return {
+    from: from, to: to, days: days,
+    opening: opening, income: income, expense: expense, net: income - expense, closing: opening + income - expense,
+    rows: rows, incRows: incRows, expRows: expRows, byTarget: byTarget,
+    biggestExp: pick(expRows), biggestInc: pick(incRows),
+    prevIncome: prevIncome, prevExpense: prevExpense, invalid: invalid
+  };
+}
+
+// ================= بناء الصفحة =================
+function arch(cls, big, lbl){
+  return '<div class="arch ' + cls + '"><div class="big"><span class="num">' + big + '</span></div><div class="lbl">' + lbl + '</div></div>';
+}
+function ins(k, v, s, cls){
+  return '<div class="ins"><div class="k">' + k + '</div><div class="v ' + (cls || '') + '">' + v + '</div><div class="s">' + (s || '&nbsp;') + '</div></div>';
+}
+function deltaInfo(cur, prev, upIsBad){
+  if(!(prev > 0)) return { v:'—', s: cur > 0 ? 'لا توجد حركة في الفترة السابقة' : '', cls:'' };
+  const pct = (cur - prev) / prev * 100;
+  const flat = Math.abs(pct) < 0.05;
+  const arrow = flat ? '■' : (pct > 0 ? '▲' : '▼');
+  const cls = flat ? '' : (((pct > 0) === upIsBad) ? 'bad' : 'good');
+  return { v: arrow + ' <span class="num">' + (Math.round(Math.abs(pct) * 10) / 10) + '%</span>', s: 'الفترة السابقة: ' + n(prev), cls: cls };
+}
+function shortText(s, k){ s = String(s || ''); return s.length > k ? s.slice(0, k) + '…' : s; }
+
+function headHtml(r){
+  return '<div class="rp-head">' +
+    '<div class="rp-brand">' + APP.icon + ' ' + esc(APP.title) + '</div>' +
+    '<h2>' + TYPES[reportType].title + '</h2>' +
+    '<div class="rp-period">من <span class="num">' + fmtDMY(r.from) + '</span> إلى <span class="num">' + fmtDMY(r.to) + '</span> ' +
+    '<span class="rp-days">(' + daysLabel(r.days) + ')</span></div></div>';
+}
+
+function archesHtml(r){
+  let h = '<div class="arches">';
+  if(reportType === 'all'){
+    h += arch('income', n(r.income), 'الإيرادات') + arch('expense', n(r.expense), 'المصروفات') + arch('remaining', n(r.closing), 'رصيد آخر الفترة');
+  } else if(reportType === 'expense'){
+    h += arch('expense', n(r.expense), 'إجمالي المصروفات') + arch('neutral', String(r.expRows.length), 'عدد العمليات') + arch('neutral', n(r.expense / r.days), 'المتوسط اليومي');
+  } else {
+    h += arch('income', n(r.income), 'إجمالي الإيرادات') + arch('neutral', String(r.incRows.length), 'عدد الدفعات') + arch('neutral', r.incRows.length ? n(r.income / r.incRows.length) : '—', 'متوسط الدفعة');
+  }
+  h += '</div>';
+  if(reportType === 'all'){
+    h += '<div class="statement">' +
+      '<span>رصيد أول الفترة <b class="num">' + n(r.opening) + '</b></span>' +
+      '<span>+ الإيرادات <b class="num">' + n(r.income) + '</b></span>' +
+      '<span>− المصروفات <b class="num">' + n(r.expense) + '</b></span>' +
+      '<span>= رصيد آخر الفترة <b class="num">' + n(r.closing) + '</b></span></div>';
+  }
+  return h;
+}
+
+function insightsHtml(r){
+  const items = [];
+  const top = r.byTarget[0];
+  const topCat = top ? ins('أعلى جهة صرفاً', esc(top.name), '<span class="num">' + n(top.total) + '</span> · ' + top.pctLabel) : ins('أعلى جهة صرفاً', '—', '');
+  const bigE = r.biggestExp ? ins('أكبر مصروف', '<span class="num">' + n(r.biggestExp.amount) + '</span>', esc(shortText(r.biggestExp.desc, 28))) : ins('أكبر مصروف', '—', '');
+  const bigI = r.biggestInc ? ins('أكبر إيراد', '<span class="num">' + n(r.biggestInc.amount) + '</span>', esc(shortText(r.biggestInc.desc, 28))) : ins('أكبر إيراد', '—', '');
+  const dE = deltaInfo(r.expense, r.prevExpense, true);
+  const dI = deltaInfo(r.income, r.prevIncome, false);
+  if(reportType === 'all'){
+    items.push(ins('عدد القيود', '<span class="num">' + r.rows.length + '</span>', r.incRows.length + ' إيراد · ' + r.expRows.length + ' مصروف'));
+    items.push(topCat);
+    items.push(bigE);
+    items.push(ins('المصروف مقارنة بالفترة السابقة', dE.v, dE.s, dE.cls));
+  } else if(reportType === 'expense'){
+    items.push(topCat);
+    items.push(bigE);
+    items.push(ins('مقارنة بالفترة السابقة', dE.v, dE.s, dE.cls));
+  } else {
+    items.push(bigI);
+    items.push(ins('مقارنة بالفترة السابقة', dI.v, dI.s, dI.cls));
+  }
+  return '<div class="insights">' + items.join('') + '</div>';
+}
+
+function barsHtml(r){
+  if(reportType === 'income' || !r.byTarget.length) return '';
+  const max = r.byTarget[0].total || 1;
+  return '<div class="sec-title">توزيع المصروفات حسب الجهة</div>' +
+    r.byTarget.map(t =>
+      '<div class="bar-row"><div class="bar-top"><span>' + esc(t.name) + ' <small>(' + t.count + ')</small></span>' +
+      '<span><span class="num">' + n(t.total) + '</span> · ' + t.pctLabel + '</span></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(3, t.total / max * 100) + '%"></div></div></div>'
+    ).join('');
+}
+
+function descCell(x){
+  return esc(x.desc || '—') + (x.notes ? '<span class="desc-note">' + esc(x.notes) + '</span>' : '');
+}
+
+function tableHtml(r){
+  if(reportType === 'all'){
+    const body = r.rows.length ? r.rows.map(x =>
+      '<tr><td><span class="num">' + x.date + '</span></td><td>' + descCell(x) + '</td><td>' + esc(x.target || '—') + '</td>' +
+      '<td class="inc">' + (x.type === 'income' ? '<span class="num">' + n(x.amount) + '</span>' : '') + '</td>' +
+      '<td class="exp">' + (x.type === 'expense' ? '<span class="num">' + n(x.amount) + '</span>' : '') + '</td>' +
+      '<td><span class="num' + (x.balance < 0 ? ' neg' : '') + '">' + n(x.balance) + '</span></td></tr>'
+    ).join('') : '<tr><td colspan="6" class="none">لا توجد حركات في هذه الفترة</td></tr>';
+    return '<div class="sec-title">كشف الحركات</div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>البيان</th><th>الجهة</th><th>إيراد</th><th>مصروف</th><th>الرصيد</th></tr></thead><tbody>' +
+      '<tr class="open"><td colspan="5">رصيد أول الفترة</td><td><span class="num' + (r.opening < 0 ? ' neg' : '') + '">' + n(r.opening) + '</span></td></tr>' + body +
+      '<tr class="close"><td colspan="3">الإجمالي · رصيد آخر الفترة</td><td class="inc"><span class="num">' + n(r.income) + '</span></td><td class="exp"><span class="num">' + n(r.expense) + '</span></td><td><span class="num' + (r.closing < 0 ? ' neg' : '') + '">' + n(r.closing) + '</span></td></tr>' +
+      '</tbody></table></div>';
+  }
+  if(reportType === 'expense'){
+    if(!r.expRows.length) return '<div class="sec-title">تفاصيل المصروفات</div><div class="empty-block">لا توجد مصروفات في هذه الفترة</div>';
+    return '<div class="sec-title">تفاصيل المصروفات</div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>البيان</th><th>الجهة</th><th>المبلغ</th><th>الإجمالي التراكمي</th></tr></thead><tbody>' +
+      r.expRows.map(x => '<tr><td><span class="num">' + x.date + '</span></td><td>' + descCell(x) + '</td><td>' + esc(x.target || '—') + '</td><td class="exp"><span class="num">' + n(x.amount) + '</span></td><td><span class="num">' + n(x.cum) + '</span></td></tr>').join('') +
+      '<tr class="close"><td colspan="3">إجمالي المصروفات</td><td class="exp"><span class="num">' + n(r.expense) + '</span></td><td></td></tr></tbody></table></div>';
+  }
+  if(!r.incRows.length) return '<div class="sec-title">تفاصيل الإيرادات</div><div class="empty-block">لا توجد إيرادات في هذه الفترة</div>';
+  return '<div class="sec-title">تفاصيل الإيرادات</div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>البيان</th><th>المبلغ</th><th>الإجمالي التراكمي</th></tr></thead><tbody>' +
+    r.incRows.map(x => '<tr><td><span class="num">' + x.date + '</span></td><td>' + descCell(x) + '</td><td class="inc"><span class="num">' + n(x.amount) + '</span></td><td><span class="num">' + n(x.cum) + '</span></td></tr>').join('') +
+    '<tr class="close"><td colspan="2">إجمالي الإيرادات</td><td class="inc"><span class="num">' + n(r.income) + '</span></td><td></td></tr></tbody></table></div>';
+}
+
+function notesHtml(r){
+  const now = new Date();
+  let h = '';
+  if(r.invalid > 0){
+    h += '<div class="note warn">تنبيه: يوجد ' + r.invalid + ' قيد بتاريخ غير صالح لم يدخل في هذا التقرير، صحّح تاريخه من الأداة ليظهر هنا.</div>';
+  }
+  h += '<div class="note">أُعدّ هذا التقرير بتاريخ ' + fmtDMY(now) + ' الساعة ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ' تلقائياً من بيانات الشيت.</div>';
+  return h;
+}
+
+function render(){
+  if(!DATA || !range.from || !range.to) return;
+  const r = computeReport(range.from, range.to);
+  REPORT = r;
+  let html = headHtml(r) + archesHtml(r) + insightsHtml(r);
+  if(reportType !== 'income') html += barsHtml(r);
+  html += tableHtml(r) + notesHtml(r);
+  el('report').innerHTML = html;
+}
+
+// ================= المدة (من / إلى) =================
+const DEFAULT_HINT = 'الصيغة: يوم-شهر-سنة، والفترة تشمل اليومين.';
+function setHint(msg){
+  const h = el('rangeHint');
+  if(msg){ h.textContent = msg; h.classList.add('err'); }
+  else { h.textContent = DEFAULT_HINT; h.classList.remove('err'); }
+}
+function setFields(from, to){ el('dFrom').value = fmtDMY(from); el('dTo').value = fmtDMY(to); }
+function readField(input){
+  if(!/^\d{2}-\d{2}-\d{4}$/.test(input.value)) return null;
+  const p = parseAnyDate(input.value);
+  return p ? new Date(p.y, p.m - 1, p.d) : null;
+}
+function applyFields(){
+  const f = readField(el('dFrom')), t = readField(el('dTo'));
+  if(!f || !t){
+    const complete = el('dFrom').value.length === 10 && el('dTo').value.length === 10;
+    setHint(complete ? 'أحد التاريخين غير صالح، اكتبه بصيغة يوم-شهر-سنة' : '');
+    return;
+  }
+  if(f.getTime() > t.getTime()){ setHint('تاريخ البداية بعد تاريخ النهاية، صحّح أحدهما'); return; }
+  range = { from: f, to: t };
+  setHint('');
+  render();
+}
+function presetRange(key){
+  const t = startOfDay(new Date());
+  if(key === 'last') return [addMonths(t, -1), t];
+  if(key === 'thisMonth') return [new Date(t.getFullYear(), t.getMonth(), 1), t];
+  if(key === 'prevMonth') return [new Date(t.getFullYear(), t.getMonth() - 1, 1), new Date(t.getFullYear(), t.getMonth(), 0)];
+  if(key === 'last3') return [addMonths(t, -3), t];
+  if(key === 'year') return [new Date(t.getFullYear(), 0, 1), t];
+  if(key === 'all'){
+    if(!DATA) return null;
+    let min = null, max = t.getTime();
+    (DATA.income || []).concat(DATA.expenses || []).forEach(x => {
+      const p = parseAnyDate(x.date);
+      if(!p) return;
+      if(min === null || p.ts < min) min = p.ts;
+      if(p.ts > max) max = p.ts;
+    });
+    return [min === null ? t : startOfDay(new Date(min)), startOfDay(new Date(max))];
+  }
+  return null;
+}
+function syncPresets(){
+  document.querySelectorAll('#presets .chip').forEach(b => b.classList.toggle('active', b.dataset.p === activePreset));
+}
+function applyPreset(key){
+  const r = presetRange(key);
+  if(!r) return;
+  activePreset = key;
+  range = { from: r[0], to: r[1] };
+  setFields(r[0], r[1]);
+  setHint('');
+  syncPresets();
+  render();
+}
+function syncTypeSwitch(){
+  document.querySelectorAll('#typeSwitch button').forEach(b => b.classList.toggle('active', b.dataset.type === reportType));
+}
+function bindDateField(inputId, pickerId, btnId){
+  const input = el(inputId), picker = el(pickerId);
+  input.addEventListener('input', () => { input.value = maskDate(input.value); activePreset = null; syncPresets(); applyFields(); });
+  input.addEventListener('paste', (e) => {
+    const p = parseAnyDate((e.clipboardData || window.clipboardData).getData('text'));
+    if(p){ e.preventDefault(); input.value = pad2(p.d) + '-' + pad2(p.m) + '-' + p.y; activePreset = null; syncPresets(); applyFields(); }
+  });
+  el(btnId).addEventListener('click', () => {
+    const p = parseAnyDate(input.value);
+    if(p) picker.value = p.y + '-' + pad2(p.m) + '-' + pad2(p.d);
+    try{ picker.showPicker(); }catch(err){ picker.focus(); picker.click(); }
+  });
+  picker.addEventListener('change', () => {
+    if(!picker.value) return;
+    const q = picker.value.split('-');
+    input.value = q[2] + '-' + q[1] + '-' + q[0];
+    activePreset = null; syncPresets(); applyFields();
+  });
+}
+
+// ================= الحفظ والمشاركة =================
+let toastTimer = null;
+function showToast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function baseName(){
+  return 'تقرير-' + TYPES[reportType].file + '-' + APP.fileName + '-' + fmtDMY(range.from) + '_' + fmtDMY(range.to);
+}
+function reportLink(){
+  return location.origin + location.pathname + '?app=' + params.get('app') + '&type=' + reportType +
+    '&from=' + fmtDMY(range.from) + '&to=' + fmtDMY(range.to);
+}
+function summaryText(r){
+  const L = [];
+  L.push('📄 ' + TYPES[reportType].title + ' — ' + APP.title);
+  L.push('📅 الفترة: من ' + fmtDMY(r.from) + ' إلى ' + fmtDMY(r.to));
+  L.push('');
+  if(reportType === 'all'){
+    L.push('🏦 رصيد أول الفترة: ' + n(r.opening));
+    L.push('🟢 الإيرادات: ' + n(r.income));
+    L.push('🔴 المصروفات: ' + n(r.expense));
+    L.push('⚖️ الصافي: ' + signed(r.net));
+    L.push('✅ رصيد آخر الفترة: ' + n(r.closing));
+  } else if(reportType === 'expense'){
+    L.push('🔴 إجمالي المصروفات: ' + n(r.expense));
+    L.push('🧾 عدد العمليات: ' + r.expRows.length);
+  } else {
+    L.push('🟢 إجمالي الإيرادات: ' + n(r.income));
+    L.push('🧾 عدد الدفعات: ' + r.incRows.length);
+  }
+  if(reportType !== 'income' && r.byTarget.length){
+    L.push('');
+    L.push('أعلى الجهات صرفاً:');
+    r.byTarget.slice(0, 3).forEach(t => L.push('• ' + t.name + ': ' + n(t.total) + ' (' + t.pctLabel + ')'));
+  }
+  return L.join('\n');
+}
+function shareMessage(){ return summaryText(REPORT) + '\n\n🔗 التقرير كاملاً:\n' + reportLink(); }
+
+function csvCell(v){
+  const s = String(v === null || v === undefined ? '' : v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function buildCsvText(r){
+  const rows = [];
+  if(reportType === 'all'){
+    rows.push(['التاريخ','النوع','الجهة','البيان','إيراد','مصروف','الرصيد','ملاحظات']);
+    rows.push([fmtDMY(r.from), 'رصيد أول الفترة', '', '', '', '', r.opening, '']);
+    r.rows.forEach(x => rows.push([x.date, x.type === 'income' ? 'إيراد' : 'مصروف', x.target, x.desc, x.type === 'income' ? x.amount : '', x.type === 'expense' ? x.amount : '', x.balance, x.notes || '']));
+    rows.push([fmtDMY(r.to), 'الإجمالي ورصيد آخر الفترة', '', '', r.income, r.expense, r.closing, '']);
+  } else if(reportType === 'expense'){
+    rows.push(['التاريخ','الجهة','البيان','المبلغ','الإجمالي التراكمي','ملاحظات']);
+    r.expRows.forEach(x => rows.push([x.date, x.target, x.desc, x.amount, x.cum, x.notes || '']));
+    rows.push(['', '', 'إجمالي المصروفات', r.expense, '', '']);
+  } else {
+    rows.push(['التاريخ','البيان','المبلغ','الإجمالي التراكمي','ملاحظات']);
+    r.incRows.forEach(x => rows.push([x.date, x.desc, x.amount, x.cum, x.notes || '']));
+    rows.push(['', 'إجمالي الإيرادات', r.income, '', '']);
+  }
+  return '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+}
+function downloadCsv(){
+  if(!REPORT){ showToast('انتظر حتى يكتمل تحميل التقرير'); return; }
+  const blob = new Blob([buildCsvText(REPORT)], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = baseName() + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  showToast('تم تنزيل ملف Excel');
+}
+function printPdf(){
+  if(!REPORT){ showToast('انتظر حتى يكتمل تحميل التقرير'); return; }
+  const old = document.title;
+  document.title = baseName();
+  const restore = () => { document.title = old; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+async function copyText(text, okMsg){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }
+  catch(err){
+    try{ const ta = el('shareText'); ta.focus(); ta.select(); ok = document.execCommand('copy'); }catch(e2){}
+  }
+  if(ok){ closeShare(); showToast(okMsg); }
+  else { showToast('حدّد النص بالأعلى وانسخه يدوياً'); }
+}
+const shareOverlay = el('shareOverlay');
+function openShare(){
+  if(!REPORT){ showToast('انتظر حتى يكتمل تحميل التقرير'); return; }
+  const msg = shareMessage();
+  el('shareText').value = msg;
+  el('shWhats').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  el('shTele').href = 'https://t.me/share/url?url=' + encodeURIComponent(reportLink()) + '&text=' + encodeURIComponent(summaryText(REPORT));
+  el('shMail').href = 'mailto:?subject=' + encodeURIComponent(TYPES[reportType].title + ' — ' + APP.title) + '&body=' + encodeURIComponent(msg);
+  el('shMore').style.display = navigator.share ? '' : 'none';
+  shareOverlay.classList.add('show');
+}
+function closeShare(){ shareOverlay.classList.remove('show'); }
+
+// ================= البداية =================
+async function loadData(){
+  el('report').innerHTML = '<div class="state">جارٍ تحميل البيانات…</div>';
+  try{
+    const res = await fetch(APP.url);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    DATA = data;
+    render();
+  }catch(err){
+    el('report').innerHTML = '<div class="state"><b>تعذّر تحميل البيانات</b><br>تأكد من الاتصال ثم حاول مرة أخرى.<br><button type="button" class="act" id="retry" style="margin-top:12px; width:180px">إعادة المحاولة</button></div>';
+    el('retry').addEventListener('click', loadData);
+  }
+}
+
+function init(){
+  if(!APP){
+    el('controls').style.display = 'none';
+    el('report').innerHTML = '<div class="state"><b>اختر التطبيق</b><br>' +
+      '<a class="act" style="display:inline-block; margin:10px 4px 0; text-decoration:none" href="report.html?app=mosque">🕌 مصروفات المساجد</a>' +
+      '<a class="act" style="display:inline-block; margin:10px 4px 0; text-decoration:none" href="report.html?app=villa">🏗️ فيلا سعد الحربي</a></div>';
+    return;
+  }
+  document.title = 'تقارير ' + APP.title;
+  el('pageSub').textContent = APP.icon + ' ' + APP.title;
+  if(FROM_PORTAL) el('homeLink').style.display = 'flex';
+
+  bindDateField('dFrom', 'pFrom', 'bFrom');
+  bindDateField('dTo', 'pTo', 'bTo');
+
+  const pf = parseAnyDate(params.get('from')), pt = parseAnyDate(params.get('to'));
+  if(pf && pt && pf.ts <= pt.ts){
+    range = { from: new Date(pf.y, pf.m - 1, pf.d), to: new Date(pt.y, pt.m - 1, pt.d) };
+    activePreset = null;
+  } else {
+    const r = presetRange('last');   // الافتراضي: شهر سابق من تاريخ طلب التقرير
+    range = { from: r[0], to: r[1] };
+    activePreset = 'last';
+  }
+  setFields(range.from, range.to);
+  setHint('');
+  syncPresets();
+  syncTypeSwitch();
+
+  document.querySelectorAll('#presets .chip').forEach(b => b.addEventListener('click', () => applyPreset(b.dataset.p)));
+  document.querySelectorAll('#typeSwitch button').forEach(b => b.addEventListener('click', () => {
+    reportType = b.dataset.type;
+    syncTypeSwitch();
+    render();
+  }));
+  el('btnPdf').addEventListener('click', printPdf);
+  el('btnCsv').addEventListener('click', downloadCsv);
+  el('btnShare').addEventListener('click', openShare);
+  el('shClose').addEventListener('click', closeShare);
+  shareOverlay.addEventListener('click', (e) => { if(e.target === shareOverlay) closeShare(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeShare(); });
+  el('shCopyText').addEventListener('click', () => copyText(shareMessage(), 'تم نسخ الملخص مع الرابط'));
+  el('shCopyLink').addEventListener('click', () => copyText(reportLink(), 'تم نسخ رابط التقرير'));
+  el('shMore').addEventListener('click', async () => {
+    try{ await navigator.share({ title: TYPES[reportType].title + ' — ' + APP.title, text: summaryText(REPORT), url: reportLink() }); closeShare(); }
+    catch(err){ /* أغلق النافذة أو غير مدعوم */ }
+  });
+
+  loadData();
+}
+init();
+</script>
+</body>
+</html>

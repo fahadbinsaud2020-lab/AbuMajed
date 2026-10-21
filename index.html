@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>تطبيقات أبو ماجد</title>
+<title>أبو ماجد</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400..700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet" />
 <style>
@@ -102,7 +102,7 @@
     color:var(--teal-900); text-decoration:none;
   }
   .link-btn:hover{ border-color:var(--gold); }
-  .follow-btn{ display:block; }
+  .links-row{ display:flex; gap:8px; }
 
   .empty-slot{
     border:1.5px dashed var(--line); border-radius:20px; padding:22px 20px;
@@ -131,7 +131,10 @@
       <div class="go">فتح الأداة ←</div>
       </a>
       <div class="card-links">
-        <a class="link-btn follow-btn" href="mosque.html?view=1&amp;portal=1">📊 المتابعة</a>
+        <div class="links-row">
+          <a class="link-btn" href="mosque.html?view=1&amp;portal=1">📊 المتابعة</a>
+          <a class="link-btn" href="report.html?app=mosque&amp;portal=1">📄 التقارير</a>
+        </div>
       </div>
     </div>
 
@@ -143,7 +146,10 @@
       <div class="go">فتح الأداة ←</div>
       </a>
       <div class="card-links">
-        <a class="link-btn follow-btn" href="villa.html?view=1&amp;portal=1">📊 المتابعة</a>
+        <div class="links-row">
+          <a class="link-btn" href="villa.html?view=1&amp;portal=1">📊 المتابعة</a>
+          <a class="link-btn" href="report.html?app=villa&amp;portal=1">📄 التقارير</a>
+        </div>
       </div>
     </div>
 
